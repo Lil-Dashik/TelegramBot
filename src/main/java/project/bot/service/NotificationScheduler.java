@@ -18,12 +18,13 @@ import java.util.List;
 @Component
 public class NotificationScheduler {
     private static final Logger logger = LoggerFactory.getLogger(NotificationScheduler.class);
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final CommuteBot commuteBot;
 
     @Autowired
-    public NotificationScheduler(CommuteBot commuteBot) {
+    public NotificationScheduler(CommuteBot commuteBot, RestTemplate restTemplate) {
         this.commuteBot = commuteBot;
+        this.restTemplate = restTemplate;
     }
 
     @Scheduled(fixedRate = 300000)

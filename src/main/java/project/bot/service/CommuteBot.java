@@ -2,7 +2,11 @@ package project.bot.service;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -13,12 +17,10 @@ import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import project.bot.Configuration.BotConfig;
-import project.bot.DTO.UserDTO;
-import project.bot.DTO.UserDetailsDTO;
 
 
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
+
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,12 +29,13 @@ import java.util.Map;
 public class CommuteBot extends TelegramLongPollingBot {
     private final BotConfig config;
     private final RestTemplate restTemplate;
+    private final HttpHeaders httpHeaders;
     private final Map<Long, Boolean> userWaitingForData = new HashMap<>();
-
     @Autowired
-    public CommuteBot(BotConfig config, RestTemplate restTemplate) {
+    public CommuteBot(BotConfig config, RestTemplate restTemplate, HttpHeaders httpHeaders) {
         this.config = config;
         this.restTemplate = restTemplate;
+        this.httpHeaders = httpHeaders;
     }
 
     @Override
@@ -50,20 +53,20 @@ public class CommuteBot extends TelegramLongPollingBot {
                 sendGoToWorkMessage(chatId);
                 userWaitingForData.put(chatId, true);
             } else if (userWaitingForData.containsKey(chatId) && userWaitingForData.get(chatId)) {
-                saveUserDataWork(message);
+                saveUserDataWork(chatId,message);
                 userWaitingForData.put(chatId, false);
             } else if ("/stop".equalsIgnoreCase(messageText)) {
                 disableNotifications(chatId);
                 sendMessage(chatId, "Уведомления отключены. Чтобы снова их включить, начните с команды /start.");
             } else {
-                sendMessage(chatId, "Вы отправили: " + messageText);
+                sendMessage(chatId, "Неверная команда. Вы отправили: " + messageText);
             }
         }
     }
 
     private void sendStartMessage(Long chatId) {
         String startMessage = "Привет! Я бот, который помогает прогнозировать время в пути до работы. \n" +
-                "Просто отправь мне свой адрес дома и работы, и я помогу рассчитать оптимальное время для выезда.";
+                "Выбери команду /go_to_work для того, чтобы начать расчёт времени.";
 
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
@@ -77,18 +80,27 @@ public class CommuteBot extends TelegramLongPollingBot {
     }
 
     private void saveUserData(Message message) {
-        UserDetailsDTO userDetailsDTO = new UserDetailsDTO(
+        String body = String.format(
+                "%d; %s; %s",
                 message.getFrom().getId(),
                 message.getFrom().getUserName(),
                 message.getFrom().getFirstName()
         );
+
         String url = "http://localhost:8080/api/commute/start";
-        restTemplate.postForObject(url, userDetailsDTO, String.class);
+        httpHeaders.setContentType(MediaType.valueOf("text/plain; charset=UTF-8"));
+        HttpEntity<String> entity = new HttpEntity<>(body, httpHeaders);
+
+        try {
+            restTemplate.postForObject(url, entity, String.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void sendGoToWorkMessage(Long chatId) {
-        String requestMessage = "Пожалуйста, отправьте адрес дома, адрес работы и время, к которому нужно быть на работе в формате 'HH:mm'. Например: \n" +
-                "'Москва, Красная площадь 1; Москва, Тверская улица 7; 09:00'";
+        String requestMessage = "Пожалуйста, отправьте <адрес дома>; <адрес работы>; и время ('HH:mm'), к которому нужно быть на работе. Например: \n" +
+                "Москва, Красная площадь 1; Москва, Тверская улица 7; 09:00";
 
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
@@ -99,45 +111,20 @@ public class CommuteBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
-
-    private void saveUserDataWork(Message message) {
+    private void saveUserDataWork(Long telegramId, Message message) {
         String userInput = message.getText().trim();
-
-        String[] parts = userInput.split(";");
-
-        if (parts.length == 3) {
-            String homeAddress = parts[0].trim();
-            String workAddress = parts[1].trim();
-            String workStartTimeStr = parts[2].trim();
-            LocalTime workStartTime = parseTime(workStartTimeStr);
-
-            UserDTO userDTO = new UserDTO();
-            userDTO.setTelegramUserId(message.getFrom().getId());
-            userDTO.setHomeAddress(homeAddress);
-            userDTO.setWorkAddress(workAddress);
-            userDTO.setWorkStartTime(workStartTime);
-            String url = "http://localhost:8080/api/commute/goToWork";
-            RestTemplate restTemplate = new RestTemplate();
-            try {
-                restTemplate.postForObject(url, userDTO, String.class);
-                sendMessage(message.getChatId(), "Отправим уведомление за 30 минут до выезда!");
-            } catch (Exception e) {
-                e.printStackTrace();
-                sendMessage(message.getChatId(), "Произошла ошибка при расчете времени.");
-            }
-        } else {
-            sendMessage(message.getChatId(), "Неверный формат времени. Пожалуйста, укажите время в формате HH:mm.");
-        }
-    }
-
-    private LocalTime parseTime(String time) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        String url = "http://localhost:8080/api/commute/goToWork?telegramId="+telegramId;
+        httpHeaders.setContentType(MediaType.valueOf("text/plain; charset=UTF-8"));
+        HttpEntity<String> entity = new HttpEntity<>(userInput, httpHeaders);
 
         try {
-            return LocalTime.parse(time, formatter);
+            restTemplate.postForObject(url, entity, String.class);
+            sendMessage(message.getChatId(), "Отправим уведомление за 30 минут до выезда!");
+        } catch (HttpClientErrorException.BadRequest e) {
+            sendMessage(message.getChatId(), "Ошибка: " + e.getResponseBodyAsString());
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            sendMessage(message.getChatId(), "Произошла ошибка при обработке данных. Проверь формат: <дом>; <работа>; <HH:mm>. Снова выполните команду /go_to_work");
         }
     }
 
@@ -153,6 +140,7 @@ public class CommuteBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
+
     private void disableNotifications(Long telegramUserId) {
         String url = "http://localhost:8080/api/commute/stop";
 
@@ -163,6 +151,7 @@ public class CommuteBot extends TelegramLongPollingBot {
             sendMessage(telegramUserId, "Не удалось отключить уведомления. Попробуйте позже.");
         }
     }
+
     @PostConstruct
     public void initCommands() {
         List<BotCommand> commands = List.of(
