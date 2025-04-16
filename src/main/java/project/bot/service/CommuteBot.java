@@ -27,14 +27,12 @@ import java.util.Map;
 public class CommuteBot extends TelegramLongPollingBot {
     private final BotConfig config;
     private final RestTemplate restTemplate;
-    private final HttpHeaders httpHeaders;
     private final Map<Long, Boolean> userWaitingForData = new HashMap<>();
 
     @Autowired
-    public CommuteBot(BotConfig config, RestTemplate restTemplate, HttpHeaders httpHeaders) {
+    public CommuteBot(BotConfig config, RestTemplate restTemplate) {
         this.config = config;
         this.restTemplate = restTemplate;
-        this.httpHeaders = httpHeaders;
     }
 
     @Override
@@ -87,8 +85,9 @@ public class CommuteBot extends TelegramLongPollingBot {
         );
 
         String url = "http://localhost:8080/api/commute/start";
-        httpHeaders.setContentType(MediaType.valueOf("text/plain; charset=UTF-8"));
-        HttpEntity<String> entity = new HttpEntity<>(body, httpHeaders);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.valueOf("text/plain; charset=UTF-8"));
+        HttpEntity<String> entity = new HttpEntity<>(body, headers);
 
         try {
             restTemplate.postForObject(url, entity, String.class);
@@ -114,8 +113,9 @@ public class CommuteBot extends TelegramLongPollingBot {
     private void saveUserDataWork(Long telegramId, Message message) {
         String userInput = message.getText().trim();
         String url = "http://localhost:8080/api/commute/goToWork?telegramId=" + telegramId;
-        httpHeaders.setContentType(MediaType.valueOf("text/plain; charset=UTF-8"));
-        HttpEntity<String> entity = new HttpEntity<>(userInput, httpHeaders);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.valueOf("text/plain; charset=UTF-8"));
+        HttpEntity<String> entity = new HttpEntity<>(userInput, headers);
 
         try {
             restTemplate.postForObject(url, entity, String.class);
