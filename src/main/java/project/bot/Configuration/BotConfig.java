@@ -13,7 +13,10 @@ public class BotConfig {
     String botName;
     @Value("${bot.token}")
     String botToken;
-    public BotConfig() {}
+
+    public BotConfig() {
+    }
+
     public BotConfig(String botName, String botToken) {
         this.botName = botName;
         this.botToken = botToken;

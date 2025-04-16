@@ -13,7 +13,10 @@ public class NotificationDTO {
     private Long telegramUserId;
     private String message;
     private LocalDateTime notifyTime;
-    public NotificationDTO() {}
+
+    public NotificationDTO() {
+    }
+
     public NotificationDTO(Long telegramUserId, String message, LocalDateTime notifyTime) {
         this.telegramUserId = telegramUserId;
         this.message = message;

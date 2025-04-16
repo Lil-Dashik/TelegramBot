@@ -19,8 +19,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import project.bot.Configuration.BotConfig;
 
 
-
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +29,7 @@ public class CommuteBot extends TelegramLongPollingBot {
     private final RestTemplate restTemplate;
     private final HttpHeaders httpHeaders;
     private final Map<Long, Boolean> userWaitingForData = new HashMap<>();
+
     @Autowired
     public CommuteBot(BotConfig config, RestTemplate restTemplate, HttpHeaders httpHeaders) {
         this.config = config;
@@ -53,7 +52,7 @@ public class CommuteBot extends TelegramLongPollingBot {
                 sendGoToWorkMessage(chatId);
                 userWaitingForData.put(chatId, true);
             } else if (userWaitingForData.containsKey(chatId) && userWaitingForData.get(chatId)) {
-                saveUserDataWork(chatId,message);
+                saveUserDataWork(chatId, message);
                 userWaitingForData.put(chatId, false);
             } else if ("/stop".equalsIgnoreCase(messageText)) {
                 disableNotifications(chatId);
@@ -111,9 +110,10 @@ public class CommuteBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
+
     private void saveUserDataWork(Long telegramId, Message message) {
         String userInput = message.getText().trim();
-        String url = "http://localhost:8080/api/commute/goToWork?telegramId="+telegramId;
+        String url = "http://localhost:8080/api/commute/goToWork?telegramId=" + telegramId;
         httpHeaders.setContentType(MediaType.valueOf("text/plain; charset=UTF-8"));
         HttpEntity<String> entity = new HttpEntity<>(userInput, httpHeaders);
 

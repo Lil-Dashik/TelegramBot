@@ -11,8 +11,9 @@ public class AppConfig {
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
+
     @Bean
-    public HttpHeaders httpHeaders(){
+    public HttpHeaders httpHeaders() {
         return new HttpHeaders();
     }
 }
