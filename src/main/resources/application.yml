@@ -1,5 +1,5 @@
 bot:
-  name: GetToWorkInTimeBot
-  token: 7881959830:AAEMtPX1qXapq1bY7Jn6XXFX_rlowQ2EMc4
+  name: ${BOT_NAME}
+  token: ${BOT_TOKEN}
 server:
-  port: 8081
+  port: ${SERVER_PORT}
