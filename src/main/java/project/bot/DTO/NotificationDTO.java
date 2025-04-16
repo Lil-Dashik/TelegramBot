@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Setter
 @Getter
@@ -12,12 +13,12 @@ import java.time.LocalDateTime;
 public class NotificationDTO {
     private Long telegramUserId;
     private String message;
-    private LocalDateTime notifyTime;
+    private ZonedDateTime notifyTime;
 
     public NotificationDTO() {
     }
 
-    public NotificationDTO(Long telegramUserId, String message, LocalDateTime notifyTime) {
+    public NotificationDTO(Long telegramUserId, String message, ZonedDateTime notifyTime) {
         this.telegramUserId = telegramUserId;
         this.message = message;
         this.notifyTime = notifyTime;
