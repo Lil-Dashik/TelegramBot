@@ -1,4 +1,4 @@
-package project.bot.Configuration;
+package project.bot.configuration;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,9 +10,9 @@ import org.springframework.context.annotation.Configuration;
 @Setter
 public class BotConfig {
     @Value("${bot.name}")
-    String botName;
+    private String botName;
     @Value("${bot.token}")
-    String botToken;
+    private String botToken;
 
     public BotConfig() {
     }
