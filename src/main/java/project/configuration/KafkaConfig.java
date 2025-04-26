@@ -35,6 +35,7 @@ public class KafkaConfig {
                 .configs(Map.of("min.insync.replicas", "1"))
                 .build();
     }
+
     @Bean
     public NewTopic confirmationsTopic() {
         return TopicBuilder.name("confirmations")

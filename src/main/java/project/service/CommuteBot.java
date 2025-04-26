@@ -80,6 +80,7 @@ public class CommuteBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
+
     private void saveUserData(Message message) {
         BotCommandDTO dto = new BotCommandDTO("start",
                 message.getFrom().getId(),

@@ -8,10 +8,12 @@ import project.dto.NotificationDTO;
 @Component
 public class AlertConsumer {
     private final CommuteBot commuteBot;
+
     @Autowired
     public AlertConsumer(CommuteBot commuteBot) {
         this.commuteBot = commuteBot;
     }
+
     @KafkaListener(topics = "alerts", groupId = "bot-group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(NotificationDTO notification) {
         commuteBot.sendMessage(notification.getTelegramUserId(), notification.getMessage());
