@@ -1,4 +1,4 @@
-package project.bot.configuration;
+package project.configuration;
 
 import lombok.Getter;
 import lombok.Setter;

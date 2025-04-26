@@ -1,4 +1,4 @@
-package project.bot.dto;
+package project.dto;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -1,20 +1,21 @@
-package project.bot.service;
+package project.service;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import project.bot.CommuteClient;
-import project.bot.configuration.BotConfig;
-import project.bot.mapper.MessageMapper;
+import project.configuration.BotConfig;
+import project.mapper.MessageMapper;
+import project.dto.BotCommandDTO;
 
 
 import java.util.HashMap;
@@ -23,16 +24,20 @@ import java.util.Map;
 
 @Component
 public class CommuteBot extends TelegramLongPollingBot {
+    private final KafkaBotProducer kafkaProducer;
     private final BotConfig config;
-    private final CommuteClient commuteClient;
     private final MessageMapper messageMapper;
     private final Map<Long, Boolean> userWaitingForData = new HashMap<>();
+    private KafkaTemplate<String, Long> kafkaTemplate;
+
 
     @Autowired
-    public CommuteBot(BotConfig config, CommuteClient commuteClient, MessageMapper messageMapper) {
+    public CommuteBot(BotConfig config, MessageMapper messageMapper,
+                      KafkaBotProducer kafkaProducer, KafkaTemplate<String, Long> kafkaTemplate) {
         this.config = config;
-        this.commuteClient = commuteClient;
         this.messageMapper = messageMapper;
+        this.kafkaProducer = kafkaProducer;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -75,19 +80,22 @@ public class CommuteBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
-
     private void saveUserData(Message message) {
-        String body = String.format(
-                "%d; %s; %s",
+        BotCommandDTO dto = new BotCommandDTO("start",
                 message.getFrom().getId(),
-                message.getFrom().getUserName(),
-                message.getFrom().getFirstName()
+                String.format("%s; %s", message.getFrom().getUserName(), message.getFrom().getFirstName())
         );
-        try {
-            commuteClient.sendStartData(body);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        kafkaProducer.sendCommand(dto);
+    }
+
+    private void saveUserDataWork(Long telegramId, Message message) {
+        BotCommandDTO dto = new BotCommandDTO("go_to_work", telegramId, message.getText());
+        kafkaProducer.sendCommand(dto);
+    }
+
+    private void disableNotifications(Long telegramUserId) {
+        BotCommandDTO dto = new BotCommandDTO("stop", telegramUserId, null);
+        kafkaProducer.sendCommand(dto);
     }
 
     private void sendGoToWorkMessage(Long chatId) {
@@ -102,17 +110,8 @@ public class CommuteBot extends TelegramLongPollingBot {
         }
     }
 
-    private void saveUserDataWork(Long telegramId, Message message) {
-        String userInput = message.getText().trim();
-        try {
-            commuteClient.sendWorkData(telegramId, userInput);
-            sendMessage(message.getChatId(), "Отправим уведомление за 30 минут до выезда!");
-        } catch (HttpClientErrorException.BadRequest e) {
-            sendMessage(message.getChatId(), "Ошибка: " + e.getResponseBodyAsString());
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendMessage(message.getChatId(), "Произошла ошибка при обработке данных. Проверь формат: <дом>; <работа>; <HH:mm>. Снова выполните команду /go_to_work");
-        }
+    public void sendMarkNotified(Long telegramId) {
+        kafkaTemplate.send("mark-notified", telegramId);
     }
 
 
@@ -123,15 +122,6 @@ public class CommuteBot extends TelegramLongPollingBot {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
-        }
-    }
-
-    private void disableNotifications(Long telegramUserId) {
-        try {
-            commuteClient.stopNotifications(telegramUserId);
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendMessage(telegramUserId, "Не удалось отключить уведомления. Попробуйте позже.");
         }
     }
 
@@ -161,3 +151,36 @@ public class CommuteBot extends TelegramLongPollingBot {
         return config.getBotToken();
     }
 }
+//    private void disableNotifications(Long telegramUserId) {
+//        try {
+//            commuteClient.stopNotifications(telegramUserId);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            sendMessage(telegramUserId, "Не удалось отключить уведомления. Попробуйте позже.");
+//        }
+//    }
+//    private void saveUserDataWork(Long telegramId, Message message) {
+//        String userInput = message.getText().trim();
+//        try {
+//            commuteClient.sendWorkData(telegramId, userInput);
+//            sendMessage(message.getChatId(), "Отправим уведомление за 30 минут до выезда!");
+//        } catch (HttpClientErrorException.BadRequest e) {
+//            sendMessage(message.getChatId(), "Ошибка: " + e.getResponseBodyAsString());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            sendMessage(message.getChatId(), "Произошла ошибка при обработке данных. Проверь формат: <дом>; <работа>; <HH:mm>. Снова выполните команду /go_to_work");
+//        }
+//    }
+//    private void saveUserData(Message message) {
+//        String body = String.format(
+//                "%d; %s; %s",
+//                message.getFrom().getId(),
+//                message.getFrom().getUserName(),
+//                message.getFrom().getFirstName()
+//        );
+//        try {
+//            commuteClient.sendStartData(body);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }

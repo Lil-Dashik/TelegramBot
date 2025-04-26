@@ -1,4 +1,4 @@
-package project.bot.configuration;
+package project.configuration;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-import project.bot.service.CommuteBot;
+import project.service.CommuteBot;
 
 
 @Component

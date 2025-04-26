@@ -1,4 +1,4 @@
-package project.bot;
+package project;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
