@@ -1,6 +1,6 @@
 spring:
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: ${KAFKA_BROKER}
     consumer:
       group-id: bot-group
       auto-offset-reset: earliest
